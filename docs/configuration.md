@@ -8,6 +8,10 @@ title: Configuration
 
 Prowl configuration lives at `.prowl/config.yml`. All options with their defaults:
 
+:::note `{{VAR}}` interpolation
+String values in `config.yml` support `{{VAR}}` placeholders. As of **0.1.8** they are resolved **before the config is validated** — from `process.env`, with the config-directory `.env` filling in any missing keys (without overriding what is already in the environment). See [Variables → Variables in `config.yml`](/variables#variables-in-configyml).
+:::
+
 ```yaml
 # Execution target. Defaults to the web target; existing web configs work unchanged.
 target:
