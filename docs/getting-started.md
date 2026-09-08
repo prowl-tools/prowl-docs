@@ -9,8 +9,9 @@ title: Getting Started
     <div className="docs-hero__eyebrow">Prowl Documentation</div>
     <h1>Deterministic QA Hunts From Your CLI</h1>
     <div className="docs-hero__subtitle">
-      Prowl turns browser workflows into repeatable hunts you can run locally, in CI, or hand to an AI agent.
-      This page gets you from zero to a passing smoke test quickly.
+      Prowl drives native macOS apps (experimental) and web apps from the same declarative YAML — repeatable
+      hunts you can run locally, in CI, or hand to an AI agent. This page gets you from zero to a passing
+      smoke test quickly.
     </div>
     <div className="docs-hero__actions">
       <a className="button button--primary button--lg" href="#install">Start In 60 Seconds</a>
@@ -25,7 +26,7 @@ title: Getting Started
 <div className="docs-quickstart">
   <div className="docs-quickstart__row">
     <img src="/img/prowl-logo.png" alt="" aria-hidden="true" className="docs-quickstart__logo" />
-    <span><strong>Before you start:</strong> Node.js 20+, npm, and a runnable web app.</span>
+    <span><strong>Before you start:</strong> Node.js 20+, npm, and an app to test — a web app, or a native <a href="/macos-target">macOS app</a> (experimental).</span>
   </div>
 </div>
 
@@ -150,7 +151,7 @@ You now have a stable smoke test and a run artifact folder you can inspect in CI
   </a>
   <a className="card" href="/step-types">
     <h3>Step Types</h3>
-    <p>All 28 step types available in hunts</p>
+    <p>All 29 step types available in hunts</p>
   </a>
   <a className="card" href="/configuration">
     <h3>Configuration</h3>
