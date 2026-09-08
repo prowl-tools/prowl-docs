@@ -91,7 +91,7 @@ With your app running at that URL, confirm your setup by running the bundled sta
 prowl run hello
 ```
 
-`prowl run <name>` resolves `.prowl/hunts/<name>.yml` by file name, so `prowl run hello` runs `.prowl/hunts/hello.yml`.
+`prowl run <name>` resolves `.prowl/hunts/<name>.yml` by file name, so `prowl run hello` runs `.prowl/hunts/hello.yml`. As of **0.1.7**, a literal hunt path resolves to the same hunt, so `prowl run hello`, `prowl run hunts/hello.yml`, and `prowl run .prowl/hunts/hello.yml` are equivalent (nested paths like `.prowl/hunts/admin/users.yml` → `admin/users` included) — handy for shell tab-completion. The same normalization applies to `prowl watch` and `prowl history`.
 
 If your app uses authentication, capture storage state early with [`prowl login`](/auth) so hunts run as an authenticated user.
 
