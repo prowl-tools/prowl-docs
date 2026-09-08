@@ -21,7 +21,7 @@ The iOS target shipped in Prowl **0.1.5** and is **experimental**. Its API, sele
 
 ### The one-time WebDriverAgent build
 
-UI interaction is handled by [WebDriverAgent](https://github.com/appium/WebDriverAgent) (Apache-2.0). Its runner app is built **once** from the `appium-webdriveragent` npm dependency with `xcodebuild build-for-testing`, then cached under:
+UI interaction is handled by [WebDriverAgent](https://github.com/appium/WebDriverAgent) (Apache-2.0). Its runner is built **once** from the `appium-webdriveragent` npm dependency with `xcodebuild build-for-testing`, then cached under:
 
 ```text
 ~/.prowl/wda/<wda-version>-xcode<xcode-version>/
@@ -29,10 +29,15 @@ UI interaction is handled by [WebDriverAgent](https://github.com/appium/WebDrive
 
 The cache key includes the WDA **and** Xcode versions, so the build is reused across runs and rebuilt only when either changes. The first run prints a one-time "building WebDriverAgent…" notice and can take a few minutes. Simulators need **no code signing**.
 
-To skip the build entirely — for example in CI with a cached runner — set `PROWL_WDA_RUNNER` to a prebuilt `WebDriverAgentRunner-Runner.app`:
+:::note iOS 26+ launch path (0.1.6)
+As of **0.1.6**, Prowl hosts WebDriverAgent through the standard XCTest host launch — `xcodebuild test-without-building` driven by the generated `.xctestrun`, with the dynamic WDA port injected into the runner's environment — instead of `simctl launch` of the preinstalled xctrunner. This is the single launch path and works on iOS 18 and iOS 26+ alike (on iOS 26+ the old approach was terminated by RunningBoard for missing entitlements). The build cache and the `PROWL_WDA_RUNNER` override are preserved.
+:::
+
+To skip the build entirely — for example in CI with a cached runner — set `PROWL_WDA_RUNNER`. It may point at the generated **`.xctestrun`**, its **`Build/Products`** directory, or the runner **`.app`**:
 
 ```bash
 export PROWL_WDA_RUNNER="/path/to/WebDriverAgentRunner-Runner.app"
+# or a .xctestrun file, or the Build/Products directory that contains it
 ```
 
 ### The on-simulator agent
@@ -126,6 +131,28 @@ Native selectors address accessibility ids, labels, visible text, and element ty
 
 Text/label/role+name selectors compile to WDA NSPredicate strings (quotes and backslashes are escaped). `forbiddenSelectors` still applies on this target.
 
+## Inspecting the UI with `prowl analyze`
+
+Don't guess selectors — dump them. `prowl analyze` works on the iOS target the same way it does on the web and macOS: it attaches to a running app on a booted simulator, reads WebDriverAgent's UI hierarchy, and prints every interactive element with **ranked selector candidates** (best first), plus a windows list. It is read-only, honors `guardrails.allowedApps`, and leaves the app running.
+
+```bash
+# Uses the iOS target from .prowl/config.yml:
+prowl analyze
+
+# …or force the iOS target explicitly:
+prowl analyze --app com.apple.Preferences --platform ios
+prowl analyze --app com.example.App --platform ios --udid <SIM-UDID>   # pick a simulator
+
+# Machine-readable output for agents:
+prowl analyze --app com.apple.Preferences --platform ios --json
+```
+
+Ranking (best → last resort): `id=` (accessibility id) > `label=` > `role=<Type>[name="<text>"]` > `text=`.
+
+:::note Platform selection and the iOS `id=` caveat
+A bare bundle id is ambiguous with the macOS and iOS targets (which default to macOS unless a config `target.type` or `--platform` says otherwise), so pass `--platform ios`. With an iOS `target.type` in `.prowl/config.yml`, a bare `prowl analyze` needs no flag. WDA's page source exposes a single `name` attribute (the accessibility identifier when set, else the label), so `id=` is only offered when `name` differs from the label.
+:::
+
 ## Step compatibility
 
 Portable steps run on the iOS target; web-only steps in the top-level hunt are **rejected up front** at validation time — before anything launches — with a clear, iOS-labelled error. A `runHunt` step validates its referenced hunt when that step executes, before the nested hunt starts.
@@ -135,8 +162,9 @@ Portable steps run on the iOS target; web-only steps in the top-level hunt are *
 | `click`, `fill`, `type`, `press` | `navigate`, `waitForUrl`, `waitForNetworkIdle` |
 | `wait`, `waitForSelector` | `mockRoute` / `unmockRoute`, `evalScript`, `runScript` |
 | `assert: visible` / `notVisible` | `onDialog`, `select` / `selectOption`, `setInputFiles` |
-| `screenshot`, `assertScreenshot` | `waitForDownload`, `scroll`, `assert: urlIncludes` / `urlEquals` |
-| `repeat`, `if`, `runHunt`, `copyText` | `hover`, `scrollTo` (no touch equivalent yet) |
+| `screenshot`, `assertScreenshot`, `assertWithAI` | `waitForDownload`, `assert: urlIncludes` / `urlEquals` |
+| `scroll`, `scrollTo` | `hover` (no touch equivalent) |
+| `repeat`, `if`, `runHunt`, `copyText` | |
 
 The web-only rejection names the offending step, for example:
 
@@ -152,9 +180,10 @@ Notes:
   - `enter` / `return` and `delete` / `backspace` / `del` — sent through WDA's key endpoint to the focused element;
   - `home` — returns to the springboard.
 - **Screenshots are captured with `simctl`** (not WDA), so `screenshot` / `assertScreenshot` artifacts still work even if the agent wedges.
-- **`hover` and `scrollTo`** have no touch equivalent yet and are rejected with a clear message; scroll-gesture support is a follow-up. (On the macOS target these two are portable — the rejection is specific to touch targets.)
+- **`scroll` and `scrollTo`** work as of **0.1.8**, synthesized as touch swipes through WDA's W3C actions endpoint. Directional `scroll`'s optional `amount` is the swipe distance in **device points** (default 75% of the axis; a negative amount reverses direction); `scrollTo` runs a **bounded swipe-loop probe** (downward, then upward) and fails with an error naming the selector and attempt count if the element never appears. A matching hierarchy element must also pass WDA's `/displayed` check before `scrollTo`, `waitForSelector`, or inline visible/notVisible treat it as visible. See [Step Types](/step-types#scroll).
+- **`hover`** has no touch-device equivalent and is rejected with a clear message. (On the macOS target `hover` is portable — the rejection is specific to touch targets.)
 - URL assertions (`urlIncludes` / `urlEquals`) are web-only; use inline `assert: visible` / `notVisible` steps for checks on this target.
-- Hunt-level `assertions:` blocks are rejected before launch on this target; use inline `assert: visible` / `assert: notVisible` steps for native UI checks.
+- Hunt-level `assertions:` blocks **run** on this target as of **0.1.7**: `selectorExists` / `selectorNotExists` are evaluated against the app, while web-only assertion types (`urlIncludes`, `urlEquals`, `noConsoleErrors`, `noNetworkErrors`) are reported as `skipped`. See [Assertions](/assertions#hunt-level-assertions).
 
 ## Worked example
 
@@ -185,6 +214,50 @@ steps:
 ```bash
 prowl run settings-smoke
 ```
+
+## Continuous integration
+
+macOS runners ship Xcode and the iOS simulator runtimes. Boot a simulator with `xcrun simctl`, and cache the one-time WebDriverAgent build (`~/.prowl/wda/`, keyed on the WDA + Xcode versions) so subsequent runs skip the ~2-minute `xcodebuild`.
+
+```yaml
+name: iOS E2E
+on: [push, pull_request]
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+
+      # Cache the built WebDriverAgent runner across runs.
+      - name: Cache WebDriverAgent
+        uses: actions/cache@v4
+        with:
+          path: ~/.prowl/wda
+          key: prowl-wda-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Boot a simulator
+        run: |
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl bootstatus "iPhone 16"
+
+      - name: Run hunts against the simulator
+        run: npx prowl ci --junit
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-artifacts
+          path: .prowl/runs/**
+          if-no-files-found: ignore
+```
+
+The Prowl repo also runs a self-hosted end-to-end gate (`.github/workflows/mobile-e2e.yml`) that boots a simulator on the Prowl Tools Mac and drives Settings through the real CLI, skipping cleanly for forks.
 
 ## What's Next
 
