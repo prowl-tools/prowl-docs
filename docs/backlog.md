@@ -80,6 +80,7 @@ into the priority tiers above.
 **Likely area**: `docusaurus.config.ts` custom fields plus the deployed feedback API CORS allowlist.
 **Suggested fix direction**: Update the docs config to the current `prowl-feedback.prowl.tools` endpoint, confirm the backend route is live, and decide whether localhost should be allowed for non-production QA or whether the widget should be disabled/mocked in local dev.
 **Also seen (triage 2026-08-23)**: `qa-prowl-docs-e2e-20260802` {PDOC-QA-005} — same root cause (config still on `prowlqa.dev` vs the rebrand note), independently validated against `docusaurus.config.ts:29`.
+**Update (2026-09-08, live POST probes)**: **Ordering matters — do not do a config-only flip.** A POST to the OLD host `https://prowl-feedback.prowlqa.dev/api/feedback` returns **400** (a live API rejecting a malformed body — the worker still runs there), while the NEW host `https://prowl-feedback.prowl.tools/api/feedback` returns **404** — nothing is deployed on the new domain yet. So the fix must **(1) deploy the feedback worker/route on `prowl-feedback.prowl.tools` first** (with the docs origin in its CORS allowlist), **then (2) flip `feedbackApiUrl` in `docusaurus.config.ts`**. Flipping the config before the backend exists silently 404s every doc-feedback submission. During the `docs-cli-catchup` docs catch-up the config was briefly flipped and then reverted to keep the working `prowlqa.dev` endpoint until step 1 is done. Item stays open.
 
 {PDOC-QA-014} **MCP `npx` config uses wrong package name**
    **Severity**: Medium

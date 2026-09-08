@@ -26,7 +26,10 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   customFields: {
-    feedbackApiUrl: 'https://prowl-feedback.prowl.tools/api/feedback',
+    // Do not flip to prowl-feedback.prowl.tools until the worker/route is
+    // deployed there — the new host 404s today (verified 2026-09-08), while the
+    // prowlqa.dev worker is still live. See PDOC-QA-009 in docs/backlog.md.
+    feedbackApiUrl: 'https://prowl-feedback.prowlqa.dev/api/feedback',
   },
 
   markdown: {
