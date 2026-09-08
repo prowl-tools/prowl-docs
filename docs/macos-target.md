@@ -9,38 +9,59 @@ title: macOS Target (Experimental)
 Prowl can drive **native macOS apps** — including menu bar extras (`NSStatusItem` + `NSMenu`) — through Apple's Accessibility API, in addition to the web. You point `target.type` at `macos`, write the same portable steps you already know, and Prowl runs them against a real app instead of a browser page.
 
 :::warning Experimental
-This target is **experimental**. The macOS code path shipped in Prowl **0.1.4** (the CLI is now at 0.1.5), so a normal `prowl-tools` install includes it — but its Swift helper binary, `prowl-macdriver`, is **not** bundled in the npm package: you build it locally (see [Requirements](#requirements)), or point `PROWL_MACDRIVER_BIN` at a prebuilt binary. The API, selector dialect, and step coverage may still change.
+This target is **experimental**. The macOS code path ships in every `prowl-tools` install, but its Swift helper binary, `prowl-macdriver`, is **not yet distributed as a signed release**. The `prowl macdriver install` command exists (added in **0.1.7**), but until the first signed helper release is cut it returns a clear "no release yet — build from source" error. **Building the helper from source is the working path today** (see [Requirements](#requirements)); you can also point `PROWL_MACDRIVER_BIN` at a binary you built. The API, selector dialect, and step coverage may still change, and the target stays experimental until the two-minute signed install lands.
 :::
 
 ## Requirements
 
 - **macOS 13 or newer** (the helper's platform target).
-- A **Swift toolchain** — Xcode or the Xcode Command Line Tools.
+- A **Swift toolchain** — Xcode or the Xcode Command Line Tools — to build the helper from source (the working path today).
 - A **source checkout** of the [`prowl`](https://github.com/prowl-tools/prowl) repository only to build `prowl-macdriver`. Install the CLI normally from npm with `npm install -g prowl-tools`; a source checkout is not required for CLI installation.
 - **Accessibility** permission for the terminal that hosts Prowl — and **Screen Recording** permission too, if your hunt takes screenshots. See [Permissions](#permissions).
 
 ## Enabling it
 
-### 1. Build the helper
+### 1. Get the helper
 
-The macOS target is powered by a small Swift helper, `prowl-macdriver`, that talks to the Accessibility API. It is **not** bundled in the npm tarball — you build it once from the source checkout:
+The macOS target is powered by a small Swift helper, `prowl-macdriver`, that talks to the Accessibility API.
+
+**Build it from source (the working path today).** The signed, prebuilt helper has not been released yet, so build it once from a source checkout of the `prowl` repo:
 
 ```bash
 cd macdriver
 swift build -c release
 ```
 
-Prowl looks for the binary in this order:
-
-1. `$PROWL_MACDRIVER_BIN` — an absolute path to a prebuilt binary, if set;
-2. `macdriver/.build/release/prowl-macdriver`;
-3. `macdriver/.build/debug/prowl-macdriver`.
-
-If none exist, Prowl fails with a clear "build the helper" message rather than crashing. To point at a binary you built elsewhere, export `PROWL_MACDRIVER_BIN`:
+To point at a binary you built elsewhere, export `PROWL_MACDRIVER_BIN`:
 
 ```bash
 export PROWL_MACDRIVER_BIN="/path/to/prowl-macdriver"
 ```
+
+**The `prowl macdriver` commands (0.1.7).** Prowl ships two subcommands for managing the helper:
+
+```bash
+prowl macdriver install   # download + verify + install the signed helper
+prowl macdriver status    # show the resolved binary, versions, and permissions
+```
+
+`prowl macdriver install` will download the pinned, signed, notarized helper from GitHub Releases, verify its checksum and Developer ID signature, and install it under `~/.prowl/macdriver/<version>/` — **once the first signed release is cut**. Until then it exits with a clear message pointing you back to the source build:
+
+```text
+No published prowl-macdriver release for macdriver-vX.Y.Z yet.
+The signed binary is cut by the maintainer; until then build from source:
+  cd macdriver && swift build -c release
+```
+
+`prowl macdriver status` reports which binary resolved and how, the installed versions, whether the binary runs, and Accessibility / Screen Recording guidance — useful for confirming your source build is picked up.
+
+Prowl resolves the helper in this order:
+
+1. `$PROWL_MACDRIVER_BIN` — an absolute path to a prebuilt binary, if set;
+2. the user install at `~/.prowl/macdriver/<version>/prowl-macdriver` (once `prowl macdriver install` can run);
+3. the repo-local source build (`macdriver/.build/release` then `macdriver/.build/debug`).
+
+If none exist, Prowl fails with a clear message that leads with `prowl macdriver install` and names the source build as the contributor fallback.
 
 ### 2. Point your config at a macOS target
 
@@ -134,25 +155,29 @@ The last two are **menu bar magic selectors**:
 
 Portable steps run on **both** targets. Web-only steps in the top-level hunt are **rejected up front** at validation time on the macOS target — with a friendly error — before anything launches. A `runHunt` step validates its referenced hunt when that step executes, before the nested hunt starts.
 
-| Portable (web **and** macOS) | Web-only (rejected on macOS) |
+| Portable (web **and** macOS) | Rejected on macOS |
 |---|---|
 | `click`, `fill`, `type`, `press` | `navigate`, `waitForUrl`, `waitForNetworkIdle` |
 | `wait`, `waitForSelector` | `mockRoute` / `unmockRoute` |
 | `assert: visible` / `notVisible` | `evalScript`, `runScript` |
-| `screenshot`, `assertScreenshot` | `onDialog`, `select` / `selectOption` |
+| `screenshot`, `assertScreenshot`, `assertWithAI` | `onDialog`, `select` / `selectOption` |
 | `hover`, `scrollTo` | `setInputFiles`, `waitForDownload` |
 | `repeat`, `if`, `runHunt`, `copyText` | `scroll` (directional), `assert: urlIncludes` / `urlEquals` |
 
-The error names the offending step, for example:
+Most rejected steps are **web-only** and produce this error:
 
 ```text
 Step "navigate" is not supported by the macOS target. It is web-only;
 use a portable step (click, fill, type, press, wait, assert visible, screenshot, etc.).
 ```
 
+Directional **`scroll`** is the exception — it is *not* web-only (it runs on the [Android](/android) and [iOS](/ios) touch targets as a swipe), but there is no macOS accessibility equivalent, so it is rejected here with its own message pointing you at `scrollTo` (which macOS *does* support, via `AXScrollToVisible`). `hover` and `scrollTo` are both portable on macOS.
+
 ## Assertions on the macOS target
 
-Use **inline** `assert: visible` / `notVisible` steps for checks on this target. URL assertions (`urlIncludes` / `urlEquals`) are web-only and are rejected. Hunt-level `assertions:` blocks are not supported here — see [Known limitations](#known-limitations).
+Use **inline** `assert: visible` / `notVisible` steps for mid-flow checks. URL assertions (`urlIncludes` / `urlEquals`) are web-only and are rejected.
+
+As of **0.1.7**, hunt-level `assertions:` blocks **run** on this target: `selectorExists` / `selectorNotExists` are evaluated against the app (and pass through `guardrails.forbiddenSelectors` first), while web-only assertion types (`urlIncludes`, `urlEquals`, `noConsoleErrors`, `noNetworkErrors`) are reported as `skipped` rather than dropped. See [Assertions](/assertions#hunt-level-assertions).
 
 :::warning Use a recognized engine prefix in assertions
 In an `assert: visible` / `notVisible` value, anything **without a recognized selector prefix is treated as text to match**. The recognized prefixes on this path are `text=`, `id=`, and `role=` (plus `css=` / `xpath=`). Notably, **`label=` is _not_ recognized here** — `visible: "label=Email"` is matched as the literal text `label=Email`, not as a label selector.
@@ -170,12 +195,31 @@ So in assertions, write `text="Settings"`, `id=statusLabel`, or `role=staticText
     visible: "Settings"
 ```
 
+## The `press` key vocabulary
+
+As of **0.1.7**, `press` on the macOS target accepts the web target's full key vocabulary (previously it mapped only `Enter` / `Return` / `Space`):
+
+- **Named keys:** `Escape`, `Tab`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, the arrows (`ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight`), and `F1`–`F12`.
+- **Single printable characters** (layout-independent).
+- **Modifier combos** joined with `+`, using `Control` / `Shift` / `Alt` / `Meta` (with `Ctrl` / `Option` / `Cmd` / `Command` aliases) — e.g. `Meta+s`, `Control+a`, `Shift+Tab`.
+
+Key names are matched case-insensitively, and an unknown key fails with a category summary of what's supported.
+
+```yaml
+- press:
+    selector: id=searchField
+    key: "Meta+a"          # select-all in the focused field
+- press:
+    selector: id=searchField
+    key: "Escape"
+```
+
+A bare `Enter` / `Return` / `Space` still takes the deterministic, focus-independent `AXPress` fast path when the element supports it. Every other key activates the target app, focuses the resolved element, and posts real `keyDown` / `keyUp` events to the app's process — so keystrokes can never land in another application. No extra permission is required beyond the Accessibility grant.
+
 ## Known limitations
 
-This is a phase-one implementation. Today:
+This is an early implementation. Today:
 
-- **`press` supports `Enter` / `Return` / `Space` only.** These map onto the element's activate action; other keys are unsupported.
-- **Hunt-level assertions are not evaluated.** A per-hunt `assertions:` block is rejected up front (use inline `assert: visible` / `notVisible` instead), and config-level assertions such as `noConsoleErrors` / `noNetworkErrors` are simply not evaluated on this path — there is no browser console or network layer to observe.
 - **Screenshots are full-screen.** The `screenshot` / `assertScreenshot` steps use macOS `screencapture`, which grabs the **whole screen** (not a window-scoped image), and therefore need **Screen Recording** permission.
 - **`hover` moves the real mouse cursor** to the target element, rather than dispatching a synthetic hover.
 - App teardown **quits the target app** after the run.
@@ -244,6 +288,66 @@ prowl run settings-window
 ```
 
 The `menu=Settings` selector opens the menu bar extra and clicks the **Settings** item in one step; `waitForSelector` then waits for the settings window's `Settings` label to appear before the inline assertion confirms it's visible.
+
+## Testing a macOS app in CI
+
+Driving a real macOS app needs a graphical login session and pre-granted Accessibility (and, for screenshots, Screen Recording) permission — which **GitHub-hosted macOS runners do not provide**. So macOS hunts run on a **self-hosted / MDM-managed runner** you control.
+
+**One-time runner setup:**
+
+1. Register a self-hosted macOS runner that runs in a **logged-in GUI session** (not a headless daemon).
+2. **Pre-provision permissions** for the runner's *host app* (the shell/agent that launches Prowl) — see [Permissions](#permissions). The supported route is a **PPPC/TCC configuration profile via MDM**; grant Accessibility, plus Screen Recording if hunts screenshot.
+3. Make the **target app** installed and registered with Launch Services so Prowl can launch it by bundle id.
+4. Provide the helper. Until the signed release lands, build it once and expose it via `PROWL_MACDRIVER_BIN` (see [Get the helper](#1-get-the-helper)).
+
+A minimal hunt (≤20 lines) — open the app's menu, open Settings, assert it appeared:
+
+```yaml
+# .prowl/hunts/macos-smoke.yml
+name: macos-smoke
+steps:
+  - click:
+      selector: menu=Settings
+  - waitForSelector:
+      selector: text="Settings"
+      timeout: 10000
+  - assert:
+      visible: text="Settings"
+```
+
+A workflow on the self-hosted runner (permissions already provisioned):
+
+```yaml
+name: macOS E2E
+on: [workflow_dispatch, pull_request]
+jobs:
+  macos:
+    runs-on: [self-hosted, macOS]
+    env:
+      PROWL_MACDRIVER_BIN: ${{ github.workspace }}/macdriver/.build/release/prowl-macdriver
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - name: Build the macOS helper
+        run: (cd macdriver && swift build -c release)
+      - name: Run macOS hunts
+        run: npx prowl ci --junit
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: .prowl/runs/**
+          if-no-files-found: ignore
+```
+
+:::note
+This mirrors how the Prowl repo dogfoods its own native gates on a self-hosted Mac. Once the signed helper release ships, the "Build the macOS helper" step becomes `npx prowl macdriver install` and the `PROWL_MACDRIVER_BIN` override is no longer needed.
+:::
 
 ## What's Next
 
