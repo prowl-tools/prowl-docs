@@ -315,7 +315,7 @@ steps:
       visible: text="Settings"
 ```
 
-A workflow on the self-hosted runner (permissions already provisioned). Because this runner has desktop permissions, trigger it only from trusted code paths such as manual dispatch or protected-branch pushes; do not run privileged self-hosted macOS jobs on untrusted `pull_request` code:
+A workflow on the self-hosted runner (permissions already provisioned). Because this runner has desktop permissions, trigger it only from trusted code paths such as protected-branch pushes or manual dispatches on the `main` branch; do not run privileged self-hosted macOS jobs on untrusted `pull_request` code:
 
 ```yaml
 name: macOS E2E
@@ -323,20 +323,32 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   macos:
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, macOS]
     env:
-      PROWL_MACDRIVER_BIN: ${{ github.workspace }}/macdriver/.build/release/prowl-macdriver
+      PROWL_MACDRIVER_BIN: ${{ github.workspace }}/prowl-source/macdriver/.build/release/prowl-macdriver
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Check out Prowl helper source
+        uses: actions/checkout@v4
+        with:
+          repository: prowl-tools/prowl
+          path: prowl-source
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
       - run: npm run build
       - name: Build the macOS helper
-        run: (cd macdriver && swift build -c release)
+        run: (cd prowl-source/macdriver && swift build -c release)
       - name: Run macOS hunts
         run: npx prowl ci --junit
       - name: Upload artifacts
