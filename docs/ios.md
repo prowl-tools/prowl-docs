@@ -233,12 +233,18 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      - name: Capture Xcode version
+        id: xcode
+        run: |
+          xcodebuild -version
+          echo "version=$(xcodebuild -version | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
       # Cache the built WebDriverAgent runner across runs.
       - name: Cache WebDriverAgent
         uses: actions/cache@v4
         with:
           path: ~/.prowl/wda
-          key: prowl-wda-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: prowl-wda-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('package-lock.json') }}
 
       - name: Boot a simulator
         run: |

@@ -315,11 +315,14 @@ steps:
       visible: text="Settings"
 ```
 
-A workflow on the self-hosted runner (permissions already provisioned):
+A workflow on the self-hosted runner (permissions already provisioned). Because this runner has desktop permissions, trigger it only from trusted code paths such as manual dispatch or protected-branch pushes; do not run privileged self-hosted macOS jobs on untrusted `pull_request` code:
 
 ```yaml
 name: macOS E2E
-on: [workflow_dispatch, pull_request]
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
 jobs:
   macos:
     runs-on: [self-hosted, macOS]

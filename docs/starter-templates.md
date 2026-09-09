@@ -27,7 +27,7 @@ prowl init
 └── .gitignore          # Keeps runs/, auth-state.json, and .env out of git
 ```
 
-Re-run with `prowl init --force` to recreate the config and starter hunts.
+Re-run with `prowl init --force` to recreate the config and starter hunts. `--force` overwrites existing `.prowl` configuration and starter hunt files, so commit or back up custom changes before using it.
 
 ### `hello.yml` — the minimal smoke test
 

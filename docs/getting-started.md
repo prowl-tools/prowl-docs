@@ -26,7 +26,7 @@ title: Getting Started
 <div className="docs-quickstart">
   <div className="docs-quickstart__row">
     <img src="/img/prowl-logo.png" alt="" aria-hidden="true" className="docs-quickstart__logo" />
-    <span><strong>Before you start:</strong> Node.js 20+, npm, and an app to test — a web app, or a native <a href="/macos-target">macOS app</a> (experimental).</span>
+    <span><strong>Before you start:</strong> Node.js 20+, npm, and a runnable web app. Native <a href="/macos-target">macOS app</a> testing uses the same hunt format, but needs the macOS target setup first.</span>
   </div>
 </div>
 
