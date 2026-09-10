@@ -40,6 +40,26 @@ TEST_PASSWORD=secret123
 Add your active config-directory `.env` file to `.gitignore` to avoid committing secrets. The `prowl init` command generates `.prowl/.gitignore` including `.env` by default.
 :::
 
+The `.env` file is loaded **without overriding** anything already set in `process.env` — it only *fills in* variables that are missing. So a value exported in your shell or CI environment always wins over the same key in `.env`.
+
+## Variables in `config.yml`
+
+`{{VAR}}` placeholders also work in `.prowl/config.yml`, not just in hunts. As of **0.1.8**, config placeholders are interpolated **before the config is validated** (against `process.env`, with the config-directory `.env` filling in the gaps), so a field like a native target's `udid` reaches the launch helpers as its real value rather than a literal `{{...}}` string:
+
+```yaml
+# .prowl/config.yml
+target:
+  type: ios
+  app: "com.example.App"
+  udid: "{{IOS_SIMULATOR_UDID}}"   # resolved from env / .env before validation
+```
+
+Set the value in your environment or the config-directory `.env`:
+
+```env
+IOS_SIMULATOR_UDID=ABCD-1234-EF56
+```
+
 ## Interpolation in Steps
 
 Variables can be used in any string value within steps:

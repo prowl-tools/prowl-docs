@@ -3,6 +3,9 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 const sidebars: SidebarsConfig = {
   docsSidebar: [
     'getting-started',
+    // Desktop-first: the macOS target leads, promoted directly after Getting
+    // Started (PQD-009). Web is the second target; mobile targets stay below.
+    'macos-target',
     {
       type: 'category',
       label: 'Reference',
@@ -17,10 +20,9 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Targets',
+      label: 'Mobile Targets (Experimental)',
       collapsed: false,
       items: [
-        'macos-target',
         'android',
         'ios',
       ],
@@ -34,7 +36,7 @@ const sidebars: SidebarsConfig = {
         'watch-mode',
         'agents',
         'mcp',
-        'hub-api',
+        'starter-templates',
       ],
     },
     'troubleshooting',

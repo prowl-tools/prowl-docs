@@ -54,7 +54,7 @@ Assert the current URL matches exactly.
 
 ## Hunt-Level Assertions
 
-These run after all steps complete. Define them in the `assertions` block at the top level of your hunt YAML.
+These run after all steps complete. Define them in the `assertions` block at the top level of your hunt YAML. Assertions run even when a step failed.
 
 ```yaml
 name: smoke-test
@@ -65,6 +65,10 @@ assertions:
   - noConsoleErrors: true
   - noNetworkErrors: true
 ```
+
+:::note Hunt-level assertions on native targets
+As of **0.1.7**, hunt-level assertions run on the experimental [macOS](/macos-target), [Android](/android), and [iOS](/ios) targets too — they are no longer silently skipped. The **`selectorExists` / `selectorNotExists`** types resolve their selector against the app (and pass through `guardrails.forbiddenSelectors` first, just like step selectors). The web-only types — **`urlIncludes`, `urlEquals`, `noConsoleErrors`, `noNetworkErrors`** — are reported per-assertion with a **`skipped`** status (shown as `[SKIPPED]` in `summary.md`, `skipped` in `result.json`, and `<skipped/>` in JUnit) rather than dropped or errored. A console warning names the target for any web-only assertion a hunt explicitly authored.
+:::
 
 ### selectorExists
 
@@ -125,6 +129,10 @@ assertions:
     - "hotjar.com"
 ```
 :::
+
+## AI-Powered Assertions
+
+For checks that are hard to express as a selector — layout, rendered content, visual state — the [`assertWithAI`](/step-types#assertwithai) step (0.1.6) screenshots the page and asks a vision LLM to verdict a natural-language claim. It runs on **your own API key** (BYOK), degrades to a non-fatal skip when no key is configured, and is a deliberate, non-deterministic exception to Prowl's determinism principle. See the [step reference](/step-types#assertwithai) for the shape, config, and caveats.
 
 ## What's Next
 

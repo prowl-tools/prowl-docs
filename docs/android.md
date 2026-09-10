@@ -111,6 +111,40 @@ Compose nodes only expose a `resource-id` when the app sets `Modifier.testTag(..
 
 `forbiddenSelectors` still applies on this target (text patterns use the same substring semantics as the other targets).
 
+## Inspecting the UI with `prowl analyze`
+
+Don't guess selectors — dump them. `prowl analyze` works on the Android target the same way it does on the web and macOS: it attaches to the running app on a booted emulator/device, reads the uiautomator UI hierarchy, and prints every interactive element with **ranked selector candidates** (best first). It is read-only, honors `guardrails.allowedApps`, and leaves the app running.
+
+```bash
+# Uses the Android target from .prowl/config.yml:
+prowl analyze
+
+# …or force the Android target explicitly:
+prowl analyze --app com.android.settings --platform android
+prowl analyze --app ./app-debug.apk               # an .apk implies Android
+prowl analyze --app com.example.app --device emulator-5556   # pick a device
+
+# Machine-readable output for agents:
+prowl analyze --app com.android.settings --platform android --json
+```
+
+Ranking (best → last resort): `id=` (the package-qualified `resource-id`, the native `data-testid`) > `label=` (content-desc) > `role=<class>[name="<text>"]` > `text=`.
+
+```text
+  App Analysis: com.android.settings
+
+  Interactive Elements:
+    android.widget.EditText id=com.android.settings:id/search_src_text "Search settings"
+    android.widget.LinearLayout text="Network & internet" "Network & internet"
+    android.widget.Switch id=com.android.settings:id/switch_widget (disabled)
+
+  3 elements
+```
+
+:::note Platform selection for `--app`
+An `.apk` implies Android; otherwise pass `--platform android` (a bare package name is ambiguous with the macOS and iOS targets, which default to macOS unless a config `target.type` or `--platform` says otherwise). With an Android `target.type` in `.prowl/config.yml`, a bare `prowl analyze` needs no flag.
+:::
+
 ## Step compatibility
 
 Portable steps run on the Android target; web-only steps in the top-level hunt are **rejected up front** at validation time — before anything launches — with a clear, Android-labelled error. A `runHunt` step validates its referenced hunt when that step executes, before the nested hunt starts.
@@ -120,8 +154,9 @@ Portable steps run on the Android target; web-only steps in the top-level hunt a
 | `click`, `fill`, `type`, `press` | `navigate`, `waitForUrl`, `waitForNetworkIdle` |
 | `wait`, `waitForSelector` | `mockRoute` / `unmockRoute`, `evalScript`, `runScript` |
 | `assert: visible` / `notVisible` | `onDialog`, `select` / `selectOption`, `setInputFiles` |
-| `screenshot`, `assertScreenshot` | `waitForDownload`, `scroll`, `assert: urlIncludes` / `urlEquals` |
-| `repeat`, `if`, `runHunt`, `copyText` | `hover`, `scrollTo` (no touch equivalent yet) |
+| `screenshot`, `assertScreenshot`, `assertWithAI` | `waitForDownload`, `assert: urlIncludes` / `urlEquals` |
+| `scroll`, `scrollTo` | `hover` (no touch equivalent) |
+| `repeat`, `if`, `runHunt`, `copyText` | |
 
 The web-only rejection names the offending step, for example:
 
@@ -134,9 +169,10 @@ Notes:
 
 - **`type` and `fill`** set text on the focused / matched field **unicode-safely** (via the agent's `element/value`, not `adb shell input text`).
 - **`press`** maps key names (`Enter`, `Tab`, `Backspace`, `Back`, `Home`, arrow keys, …) onto Android key codes and dispatches them to the focused view.
-- **`hover` and `scrollTo`** have no touch equivalent yet and are rejected with a clear message; scroll-gesture support is a follow-up. (On the macOS target these two are portable — the rejection is specific to touch targets.)
+- **`scroll` and `scrollTo`** work as of **0.1.8**, synthesized as touch swipes through the agent's W3C actions endpoint. Directional `scroll`'s optional `amount` is the swipe distance in **device points** (default 75% of the axis; a negative amount reverses direction); `scrollTo` runs a **bounded swipe-loop probe** (downward, then upward) and fails with an error naming the selector and attempt count if the element never appears. See [Step Types](/step-types#scroll).
+- **`hover`** has no touch-device equivalent and is rejected with a clear message. (On the macOS target `hover` is portable — the rejection is specific to touch targets.)
 - URL assertions (`urlIncludes` / `urlEquals`) are web-only; use inline `assert: visible` / `notVisible` steps for checks on this target.
-- Hunt-level `assertions:` blocks are rejected before launch on this target; use inline `assert: visible` / `assert: notVisible` steps for native UI checks.
+- Hunt-level `assertions:` blocks **run** on this target as of **0.1.7**: `selectorExists` / `selectorNotExists` are evaluated against the app, while web-only assertion types (`urlIncludes`, `urlEquals`, `noConsoleErrors`, `noNetworkErrors`) are reported as `skipped`. See [Assertions](/assertions#hunt-level-assertions).
 
 ## Worked example
 
@@ -167,6 +203,55 @@ steps:
 ```bash
 prowl run settings-smoke
 ```
+
+## Continuous integration
+
+GitHub's Linux runners support KVM, so a hardware-accelerated emulator boots inside the job via [`reactivecircus/android-emulator-runner`](https://github.com/ReactiveCircus/android-emulator-runner). Prowl installs the uiautomator2 agent APKs from its optional dependency automatically.
+
+```yaml
+name: Android E2E
+on: [push, pull_request]
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+
+      # KVM must be accessible for a fast emulator.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run hunts against the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          disable-animations: true
+          # `prowl` is your installed CLI (e.g. `npx prowl` or a global install);
+          # the emulator is booted and on adb by the time this runs.
+          script: npx prowl ci --junit
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: .prowl/runs/**
+          if-no-files-found: ignore
+```
+
+The Prowl repo also runs a self-hosted end-to-end gate (`.github/workflows/mobile-e2e.yml`) that boots a headless emulator on the Prowl Tools Mac and drives Settings through the real CLI, skipping cleanly for forks.
 
 ## What's Next
 

@@ -27,12 +27,15 @@ truth for features. (Prowl Review has its own docs site, `prowl-code-review-docs
   (use `className`, not `class` — `.md`/`.mdx` are JSX-processed, so `class` emits React DOM warnings)
 
 ## Pages (15 total)
-- **Reference**: `step-types.mdx` (all 28 step types, tabbed examples, step↔target compatibility
+- **Reference**: `step-types.mdx` (all 29 step types, tabbed examples, step↔target compatibility
   matrix), `assertions.md`, `configuration.md`, `variables.md`, `selectors.md` (web + native
   selector dialects).
-- **Targets** (experimental native execution targets): `macos-target.md`, `android.md`, `ios.md`.
+- **Targets**: `macos-target.md` — promoted directly after Getting Started in the sidebar
+  (desktop-first, PQD-009); still labelled experimental. Mobile targets (experimental):
+  `android.md`, `ios.md`.
 - **Guides**: `auth.md`, `watch-mode.md`, `agents.mdx` (agent-first integration: library API,
-  `--json`, CI, hub templates), `mcp.mdx`, `hub-api.md`.
+  `--json`, CI, starter templates), `mcp.mdx`, `starter-templates.md` (the CLI's bundled
+  starters; replaced the retired `hub-api.md`, which now redirects here).
 - Plus `getting-started.md` (hero, install/init/run quickstart) and `troubleshooting.md`.
 
 ## Branding

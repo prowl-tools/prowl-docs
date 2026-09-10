@@ -26,6 +26,9 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   customFields: {
+    // Do not flip to prowl-feedback.prowl.tools until the worker/route is
+    // deployed there — the new host 404s today (verified 2026-09-08), while the
+    // prowlqa.dev worker is still live. See PDOC-QA-009 in docs/backlog.md.
     feedbackApiUrl: 'https://prowl-feedback.prowlqa.dev/api/feedback',
   },
 
@@ -59,6 +62,19 @@ const config: Config = {
     ],
   ],
 
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          // The community Prowl Hub was retired (2026); starter templates now
+          // ship inside the CLI. Keep the old /hub-api URL working.
+          {from: '/hub-api', to: '/starter-templates'},
+        ],
+      },
+    ],
+  ],
+
   themeConfig: {
     image: 'img/prowl-stickers-1.png',
     announcementBar: {
@@ -80,18 +96,6 @@ const config: Config = {
       },
       items: [
         {
-          type: 'dropdown',
-          label: 'Docs',
-          position: 'right',
-          items: [
-            {label: 'Prowl CLI (this site)', href: 'https://docs.prowl.tools'},
-            {label: 'Code Review', href: 'https://review.prowl.tools'},
-            {label: 'Prowl Hub', href: 'https://hub.prowl.tools'},
-            {label: 'Prowl Infra', href: 'https://infra.prowl.tools'},
-            {label: 'All docs ↗', href: 'https://prowl.tools/docs'},
-          ],
-        },
-        {
           href: 'https://prowl.tools/blog',
           label: 'Blog',
           position: 'right',
@@ -99,11 +103,6 @@ const config: Config = {
         {
           href: 'https://prowl.tools',
           label: 'Home',
-          position: 'right',
-        },
-        {
-          href: 'https://hub.prowl.tools',
-          label: 'Hub',
           position: 'right',
         },
         {
@@ -136,14 +135,13 @@ const config: Config = {
             {label: 'prowl.tools', href: 'https://prowl.tools'},
             {label: 'GitHub', href: 'https://github.com/prowl-tools/prowl'},
             {label: 'npm', href: 'https://www.npmjs.com/package/prowl-tools'},
-            {label: 'Community Hub', href: 'https://hub.prowl.tools'},
           ],
         },
         {
           title: 'Get in Touch',
           items: [
             {label: 'Email', href: 'mailto:info@prowl.tools'},
-            {label: 'Visit us on X', href: 'https://x.com/prowlqa'},
+            {label: 'Visit us on X', href: 'https://x.com/prowltools'},
           ],
         },
       ],

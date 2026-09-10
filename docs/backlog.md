@@ -35,45 +35,7 @@ from prowl GTM-002 ({PROWL-037})
 **Deliverable**: A Guides page ("Beyond YAML" or similar) with a worked example of the same flow
 at each level of escalation, cross-linked from the step-types and macOS-target pages.
 
-### {PQD-006} **Document mobile `prowl analyze` + CI recipes once the next CLI release ships**
-**Priority**: Medium
-**Description**: CLI PROWL-061 is implemented and resolved in the prowl repo but sits in the
-*Unreleased* CHANGELOG — not yet in any published npm version, so it was deliberately left out
-of the PQD-004 pages (docs track the released CLI). When the next CLI release (0.1.6) ships:
-- Document `prowl analyze` for the Android and iOS targets (native routing flags `--app` /
-  `--platform` / `--device` / `--udid`, ranked selector candidates per dialect, `--json`) on the
-  two target pages and/or the agents page.
-- Add the mobile CI recipes (GitHub Actions: Android emulator on ubuntu-latest, iOS simulator
-  on macos-* with a cached WDA build) sourced from the CLI README.
-- Refresh `docs/ios.md`'s WDA section: 0.1.6 changes the launch path to `xcodebuild
-  test-without-building` and loosens `PROWL_WDA_RUNNER` to also accept an `.xctestrun` or
-  `Build/Products` directory.
-Source from the CLI README + the (by then) released CHANGELOG entry; verify against source.
-
-### {PQD-007} **Document the `assertWithAI` step type once the next CLI release ships**
-**Priority**: Medium
-**Description**: CLI PROWL-020 added a new `assertWithAI: <string>` step type — an AI-powered
-visual assertion (screenshot + a natural-language condition → a vision LLM returns pass/fail with
-an explanation). It's implemented and resolved in the prowl repo but sits in the *Unreleased*
-CHANGELOG (ships in **0.1.6**); per the docs-track-the-released-CLI convention (same gate as
-{PQD-006}), document it when 0.1.6 is published. Add to the **Step Types** reference (and note it
-on the Assertions page):
-- The step shape `assertWithAI: "<condition>"` with a worked example, and that the model's
-  explanation is surfaced in the run report (on pass and fail).
-- **BYOK config / env vars**: `PROWL_AI_PROVIDER` (`anthropic` | `openai`), `PROWL_AI_KEY`,
-  `PROWL_AI_MODEL` (defaults are vision-capable), and `PROWL_AI_BASE_URL` (override endpoint —
-  the forward-compat seam for a future managed-AI path).
-- **Determinism caveat (document honestly)**: AI assertions are non-deterministic — the explicit
-  exception to Prowl's determinism principle. Note the low-temperature call and that the
-  explanation is always recorded for auditability.
-- **Graceful degradation**: with no AI provider configured the step **skips with a warning** (a
-  non-fatal `warn`/`○` outcome that neither fails the run nor silently passes) — document this so
-  CI users understand the behavior when `PROWL_AI_KEY` is unset.
-- **Target-agnostic**: works on any target with a screenshot capability (web + the native
-  targets), not web-only.
-Optionally cross-link that this is the first consumer of Prowl's BYOK AI layer (the managed-credit
-path is future). Source from the CLI README + the (by then) released CHANGELOG; verify against
-source.
+*No other active items — {PQD-006} and {PQD-007} were resolved 2026-09-08 (see `resolved.md`).*
 
 ## Low Priority
 
@@ -87,30 +49,11 @@ product, positioned desktop-first (macOS) with web second. The docs site must st
 retired properties and should promote the macOS target. Companion items: `prowl` PROWL-072..078,
 `prowl-web` PQW-025..027.
 
-### {PQD-008} **Replace the Hub API page with a bundled-templates page; scrub hub links**
-**Priority**: High
-**Description**: `docs/hub-api.md` documents `hub.prowl.tools/api/hunts` (13 references) and
-`docs/agents.mdx` has 6 more; `docusaurus.config.ts` carries 5 nav/footer links to hub /
-review / infra properties. Once `prowl` PROWL-072 ships templates inside the CLI, replace
-`hub-api.md` with a "Starter templates" page (`prowl init --template`, the category list, how
-to contribute a template via PR to `prowl`), rewrite the `agents.mdx` passages that tell AI
-agents to fetch from the hub, and remove the hub/review/infra links from the config. Add a
-redirect from the old `/hub-api` slug.
-**Acceptance**: `grep -ri "hub.prowl\|review.prowl\|infra" docs docusaurus.config.ts` finds
-only historical mentions in backlog/resolved; site builds; redirect works.
-
-### {PQD-009} **Promote the macOS target: sidebar position, "experimental" wording, CI guide**
-**Priority**: High
-**Description**: `macos-target.md` sits at `sidebar_position: 9` under an "Experimental"
-banner that tells readers to build a Swift helper from source. When `prowl` PROWL-074 (two-minute
-install) ships: move the macOS page directly after Getting Started, rewrite Requirements around
-the bundled helper, downgrade the banner from "Experimental" to "Beta" (or remove), and add a
-new guide **"Testing a macOS app in CI"** from `prowl` PROWL-076 (runner setup, Accessibility /
-Screen Recording permission handling, a ≤20-line hunt, the workflow file). Update the landing
-page / intro of the docs site so the first sentence says macOS + web, not "web testing with
-Playwright". Keep Android/iOS pages labelled experimental.
-**Acceptance**: macOS page is the second item in the sidebar; CI guide published; intro copy
-updated; no instruction anywhere requires a source checkout for normal use.
+*All sunset work items are resolved: {PQD-008} (hub page replaced with the bundled Starter
+Templates page + hub-link scrub) and {PQD-009} (macOS target promoted, desktop-first framing)
+were completed 2026-09-08 — see `resolved.md`. Note {PQD-009} kept the honest "experimental"
+wording because the signed macdriver install has not shipped yet; the banner was not downgraded
+to "Beta".*
 
 ---
 
@@ -137,6 +80,7 @@ into the priority tiers above.
 **Likely area**: `docusaurus.config.ts` custom fields plus the deployed feedback API CORS allowlist.
 **Suggested fix direction**: Update the docs config to the current `prowl-feedback.prowl.tools` endpoint, confirm the backend route is live, and decide whether localhost should be allowed for non-production QA or whether the widget should be disabled/mocked in local dev.
 **Also seen (triage 2026-08-23)**: `qa-prowl-docs-e2e-20260802` {PDOC-QA-005} — same root cause (config still on `prowlqa.dev` vs the rebrand note), independently validated against `docusaurus.config.ts:29`.
+**Update (2026-09-08, live POST probes)**: **Ordering matters — do not do a config-only flip.** A POST to the OLD host `https://prowl-feedback.prowlqa.dev/api/feedback` returns **400** (a live API rejecting a malformed body — the worker still runs there), while the NEW host `https://prowl-feedback.prowl.tools/api/feedback` returns **404** — nothing is deployed on the new domain yet. So the fix must **(1) deploy the feedback worker/route on `prowl-feedback.prowl.tools` first** (with the docs origin in its CORS allowlist), **then (2) flip `feedbackApiUrl` in `docusaurus.config.ts`**. Flipping the config before the backend exists silently 404s every doc-feedback submission. During the `docs-cli-catchup` docs catch-up the config was briefly flipped and then reverted to keep the working `prowlqa.dev` endpoint until step 1 is done. Item stays open.
 
 {PDOC-QA-014} **MCP `npx` config uses wrong package name**
    **Severity**: Medium

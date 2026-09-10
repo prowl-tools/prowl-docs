@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Step Types
 
-Prowl supports 28 step types. Most have both a **shorthand** form (concise, readable) and an **explicit** form (full control over selectors).
+Prowl supports 29 step types. Most have both a **shorthand** form (concise, readable) and an **explicit** form (full control over selectors).
 
 :::note
 These steps target the **web**. A **portable subset** also runs on the experimental native targets ([macOS](/macos-target), [Android](/android), [iOS](/ios)) — see [Step compatibility by target](#step-compatibility-by-target) below. Web-only steps (`navigate`, network mocking, dialogs, etc.) are rejected up front on native targets.
@@ -26,27 +26,32 @@ The **web** target runs every step. On a **native** target, web-only steps in th
 | `assert: visible` / `notVisible` | ✅ | ✅ | ✅ |
 | `screenshot`, `assertScreenshot` | ✅ | ✅ | ✅ |
 | `repeat`, `if`, `runHunt`, `copyText` | ✅ | ✅ | ✅ |
-| `hover`, `scrollTo` | ✅ | ✅ | ❌ (no touch equivalent yet) |
+| `scrollTo` | ✅ | ✅ | ✅ |
+| `scroll` (directional) | ✅ | ❌ | ✅ |
+| `hover` | ✅ | ✅ | ❌ (no touch equivalent yet) |
+| `assertWithAI` | ✅ | ✅ | ✅ |
+| Hunt-level `assertions:` (`selectorExists` / `selectorNotExists`) | ✅ | ✅ | ✅ |
 | `navigate`, `waitForUrl`, `waitForNetworkIdle` | ✅ | ❌ | ❌ |
 | `mockRoute` / `unmockRoute` | ✅ | ❌ | ❌ |
 | `evalScript`, `runScript` | ✅ | ❌ | ❌ |
 | `onDialog` | ✅ | ❌ | ❌ |
 | `select` / `selectOption`, `setInputFiles` | ✅ | ❌ | ❌ |
 | `waitForDownload` | ✅ | ❌ | ❌ |
-| `scroll` (directional) | ✅ | ❌ | ❌ |
 | `assert: urlIncludes` / `urlEquals` | ✅ | ❌ | ❌ |
-| Hunt-level `assertions:` blocks | ✅ | ❌ | ❌ |
+| Hunt-level `urlIncludes` / `urlEquals` / `noConsoleErrors` / `noNetworkErrors` | ✅ | skipped | skipped |
 
-`hover` and `scrollTo` are portable on macOS but **rejected on the touch targets** (Android and iOS) — they have no touch equivalent yet. A web-only step produces an error naming the offending step, for example:
+The scroll verbs are **asymmetric** across native targets: directional `scroll` is a synthesized touch swipe on the [Android](/android) and [iOS](/ios) targets but has no macOS accessibility equivalent (rejected there); `scrollTo` is supported everywhere — macOS resolves it via `AXScrollToVisible`, and the touch targets run a bounded swipe-loop probe. `hover` is portable on macOS but **rejected on the touch targets** (Android and iOS) — they have no hover concept.
+
+A web-only step produces an error naming the offending step, for example:
 
 ```text
 Step "navigate" is not supported by the Android target. It is web-only;
 use a portable step (click, fill, type, press, wait, assert visible, screenshot, etc.).
 ```
 
-See the [Android](/android) and [iOS](/ios) target pages for per-target selector dialects and step notes (e.g. `press` supports a smaller key set on iOS).
+See the [Android](/android) and [iOS](/ios) target pages for per-target selector dialects and step notes (e.g. `press` supports a smaller key set on the touch targets).
 
-Native targets reject non-empty hunt-level `assertions:` blocks before launch. Use inline `assert: visible` and `assert: notVisible` steps for native UI checks.
+Native targets **do** evaluate hunt-level `assertions:` blocks: `selectorExists` / `selectorNotExists` run against the app, while web-only assertion types (`urlIncludes`, `urlEquals`, `noConsoleErrors`, `noNetworkErrors`) are reported as `skipped` rather than dropped. See the [Assertions](/assertions) page.
 
 ## navigate
 
@@ -159,6 +164,12 @@ Press a keyboard key on a specific element.
     selector: "input[name='search']"
     key: "Enter"
 ```
+
+On the **web** and **macOS** targets, `press` accepts the full Playwright-style key vocabulary: `Enter` / `Return` / `Space`, `Escape`, `Tab`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, the arrows (`ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight`), `F1`–`F12`, single printable characters, and `+`-joined modifier combos using `Control` / `Shift` / `Alt` / `Meta` (with `Ctrl` / `Option` / `Cmd` / `Command` aliases), e.g. `Meta+s` or `Control+a`. On macOS, a bare `Enter` / `Return` / `Space` takes a deterministic `AXPress` fast path when the element supports it; everything else is synthesized as a real keystroke posted to the target app. See the [macOS Target](/macos-target#the-press-key-vocabulary) page.
+
+:::note Smaller key set on the touch targets
+The [Android](/android) and [iOS](/ios) targets support a smaller, honest key set (arrows / editing keys / navigation keys) and reject others with a clear message — see those target pages.
+:::
 
 ## select / selectOption
 
@@ -466,6 +477,36 @@ Visual regression check: compare the current screenshot against a stored baselin
 
 On the first run the baseline is created and the step passes. On later runs the current screenshot is compared against the baseline; the step fails if the difference exceeds `threshold`, writing a diff image into the run directory. Accept new baselines with `prowl update-baselines`.
 
+## assertWithAI
+
+AI-powered visual assertion (0.1.6): screenshots the current page/screen, sends the image plus a natural-language claim to a vision-capable LLM, and passes or fails the step on the model's verdict. The model's explanation is recorded in the step result — on **pass and fail** — for auditability.
+
+```yaml
+- assertWithAI: "The checkout total shows $42.00 and the Pay button is enabled"
+- assertWithAI: "An error banner is visible near the top of the page"
+```
+
+Works on the **web** target and any target that exposes a `screenshot` capability — including the experimental [macOS](/macos-target), [Android](/android), and [iOS](/ios) targets.
+
+### BYOK configuration
+
+`assertWithAI` runs on **your own API key** (BYOK) — the request goes directly from your machine to the provider. Configure it with environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `PROWL_AI_KEY` | Your Anthropic or OpenAI API key. **Required to enable the step.** |
+| `PROWL_AI_PROVIDER` | `anthropic` (default) or `openai`. |
+| `PROWL_AI_MODEL` | Override the model. Defaults are vision-capable per provider. |
+| `PROWL_AI_BASE_URL` | Override the API endpoint (self-hosted gateway or a future managed path). |
+
+:::warning Non-deterministic — a deliberate exception
+AI verdicts are **not deterministic**, so this is the one documented exception to Prowl's [determinism principle](/). The call is made at temperature 0 and the model is asked for a strict pass/fail verdict, and the explanation is always recorded — but treat `assertWithAI` as a smoke check, not a pixel-exact gate. Prefer `assert: visible` / `assertScreenshot` where a deterministic check will do.
+:::
+
+:::note Graceful degradation in CI
+With **no AI provider configured** (`PROWL_AI_KEY` unset), the step **skips with a warning** (a non-fatal `○` outcome) — it never fails the run and never silently passes. So a hunt using `assertWithAI` stays green in a CI job that has no key, then starts asserting once a key is provided.
+:::
+
 ## screenshot
 
 Capture a screenshot at any point.
@@ -488,22 +529,24 @@ Hover over an element. Useful for triggering tooltips, dropdown menus, or hover 
 
 ## scroll
 
-Scroll the page by direction and optional pixel amount.
+Scroll by direction and optional amount.
 
 ```yaml
 # Scroll down (default amount)
 - scroll:
     direction: "down"
 
-# Scroll up by 300px
+# Scroll up by 300 (px on web, device points on mobile)
 - scroll:
     direction: "up"
     amount: 300
 ```
 
+On the **web** target the amount is pixels (`window.scrollBy`). On the [Android](/android) and [iOS](/ios) targets (0.1.8) `scroll` is a synthesized touch swipe: `amount` is the swipe distance in **device points**, clamped to a safe fraction of the screen and **defaulting to 75%** of the relevant axis when omitted; a **negative amount reverses direction**, matching the web target. Directional `scroll` has **no macOS equivalent** and is rejected on the macOS target (use `scrollTo` there).
+
 ## scrollTo
 
-Scroll to a specific element on the page. Explicit-only — requires a selector.
+Scroll a specific element into view. Explicit-only — requires a selector. Supported on **every target**.
 
 ```yaml
 - scrollTo:
@@ -511,6 +554,8 @@ Scroll to a specific element on the page. Explicit-only — requires a selector.
 - scrollTo:
     selector: "text=Footer"
 ```
+
+On the **web** target the element is scrolled into view; on **macOS** it resolves to the accessibility `AXScrollToVisible` capability; on the [Android](/android) and [iOS](/ios) targets (0.1.8) it runs a **bounded swipe-loop probe** — searching downward, then reversing to search upward — and fails with an error naming the selector and the attempt count if the element never becomes visible.
 
 ## Shorthand vs Explicit Quick Reference
 

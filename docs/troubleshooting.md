@@ -48,9 +48,12 @@ The `{{VAR_NAME}}` in your hunt couldn't be resolved. Check:
 
 ## CLI Reference
 
+The hunt argument to `run`, `watch`, and `history` accepts either a bare name (`homepage`), a nested name (`admin/users`), or a literal path (`.prowl/hunts/homepage.yml` or `hunts/homepage.yml`) — all resolve to the same hunt (0.1.7).
+
 ```bash
-# Run a hunt
+# Run a hunt (name or path both resolve to the same hunt)
 prowl run <hunt-name>
+prowl run hunts/homepage.yml            # path form also works
 prowl run <hunt-name> --headed          # Show browser window
 prowl run <hunt-name> --trace           # Capture Playwright trace
 prowl run <hunt-name> --slow-mo 500     # Slow down actions (ms)
@@ -90,7 +93,7 @@ prowl login --config <path>             # Use custom config path
 
 # Initialize — create .prowl directory with examples
 prowl init
-prowl init --force                      # Re-create config and the starter hunt
+prowl init --force                      # Re-create config and the starter hunts (hello.yml, login-flow.yml)
 
 # List available hunts
 prowl list
