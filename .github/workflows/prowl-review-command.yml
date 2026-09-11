@@ -133,7 +133,7 @@ jobs:
           persist-credentials: false
 
       # Pinned to a reviewed commit containing the codex provider.
-      - uses: prowl-tools/prowl-code-review@e7f0431b7daf2cc818a003c5ac216f29e7da3c53
+      - uses: prowl-tools/prowl-code-review@3283f94d950db3f543ebafc312a15241f1f11800
         with:
           mode: command
           # Keyless: no PROWL_AI_KEY* — auth is the runner's own `codex login`.
