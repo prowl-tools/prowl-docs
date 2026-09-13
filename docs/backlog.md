@@ -143,6 +143,38 @@ into the priority tiers above.
    **Likely area**: Docusaurus mobile doc footer rendering or feedback component placement under `src/theme/DocItem/Footer`.
    **Suggested fix direction**: Verify whether the swizzled feedback component is hidden by Docusaurus mobile layout and move or duplicate it into a doc region rendered on mobile.
 
+{PDOC-QA-018} **Pagination hunt still expects Step Types immediately after Getting Started**
+   **Severity**: Medium
+   **Area**: Committed docs hunts / next-previous pagination
+   **Environment**: Local Docusaurus dev server at `http://localhost:3000`, branch `qa-prowl-docs-weekly-20260912`, `prowlqa run doc-next-prev --config .prowl/config.yml --json`, 2026-09-13T05:01:35Z
+   **Observed**: The `doc-next-prev` hunt failed after clicking the Getting Started next-pagination link. The click succeeded, but the browser landed on `/macos-target` while the hunt waited for `/step-types`, then timed out with `page.waitForURL: Timeout 5000ms exceeded`.
+   **Expected**: The committed pagination regression should reflect the current sidebar order, where Getting Started is followed by the promoted macOS Target page, or assert pagination generically enough that intentional sidebar insertions do not break the hunt.
+   **Reproduction steps**:
+   1. Run `npm start` in the docs repo.
+   2. Run `prowlqa run doc-next-prev --config .prowl/config.yml --json`.
+   3. Observe step 3 click `.pagination-nav__link--next` and step 4 wait for `/step-types`.
+   4. Open the failure screenshot and note the rendered page is `macOS Target (Experimental)`.
+   **Impact**: Weekly committed-hunt coverage now reports a failing navigation regression even though the docs pagination appears to follow the current sidebar; this can mask real pagination failures and erode confidence in the docs QA signal.
+   **Evidence**: `.prowl/runs/2026-09-13_00-01-35-502/result.json` shows the timeout after the next-link click; `.prowl/runs/2026-09-13_00-01-35-502/screenshots/failure_step_4.png` shows the browser on the macOS Target page. `sidebars.ts` intentionally places `macos-target` directly after `getting-started`.
+   **Likely area**: `.prowl/hunts/doc-next-prev.yml` still encodes the pre-macOS-promotion page order.
+   **Suggested fix direction**: Update the hunt to expect `/macos-target` after Getting Started, then verify the previous link returns to `/`; alternatively assert that the next/previous links navigate to their visible `href` values rather than hard-coding one historical order.
+
+{PDOC-QA-019} **Docs claim literal hunt paths work while the inspected CLI still rejects them**
+   **Severity**: Medium
+   **Area**: Getting Started / Troubleshooting CLI examples
+   **Environment**: Local docs weekly QA, local docs branch `qa-prowl-docs-weekly-20260912`, read-only CLI repo inspection at `/Users/luciusfox/Desktop/prowl`, and installed `prowlqa`, 2026-09-13T05:01Z
+   **Observed**: `docs/getting-started.md` and `docs/troubleshooting.md` state that literal hunt paths such as `.prowl/hunts/hello.yml` and `hunts/homepage.yml` resolve like bare hunt names as of 0.1.7. The inspected local CLI source still validates hunt arguments with `^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$`, which rejects dots and `.yml`; the installed CLI used for this run rejected every `.prowl/hunts/*.yml` invocation with `Invalid hunt name`.
+   **Expected**: Agent- and reader-facing command examples should match the CLI behavior available to users, or clearly label path-form support as requiring a specific unreleased/newer CLI version.
+   **Reproduction steps**:
+   1. Read the hunt-path note in `docs/getting-started.md` or the CLI reference in `docs/troubleshooting.md`.
+   2. From the docs repo, run `prowlqa run .prowl/hunts/homepage-smoke.yml --config .prowl/config.yml --json`.
+   3. Inspect `/Users/luciusfox/Desktop/prowl/src/config/hunt-name.ts`.
+   4. Compare the documented path-form support against the validation error and regex.
+   **Impact**: Users and AI agents following the docs may copy a literal path command that fails before the hunt loads, creating avoidable setup friction in the first-run and troubleshooting flows.
+   **Evidence**: The weekly run's initial file-path hunt pass returned `Invalid hunt name: ".prowl/hunts/homepage-smoke.yml". Use only letters, numbers, hyphens, underscores, and forward slashes.` Local CLI source `src/config/hunt-name.ts` has the same restriction; `docs/getting-started.md` and `docs/troubleshooting.md` currently document path-form support.
+   **Likely area**: Docs were updated ahead of the CLI behavior available in the inspected local repo and installed QA CLI, or the CLI normalization work has not landed in the runtime used for docs QA.
+   **Suggested fix direction**: Either ship/verify the CLI path-normalization change before keeping these examples, or soften the docs to recommend bare hunt names and mark literal path support with the exact minimum released CLI version once available.
+
 ## Known non-issues (QA-triaged)
 
 - {hunt execution} `prowl run <file-path>` rejected despite "Hunt name or path" help — NOT A DOCS DEFECT: these docs only teach `prowl run <hunt-name>`; the mismatch is in the CLI repo (`run.ts`/`watch.ts`/`history.ts` help says "Hunt name or path" while `hunt-name.ts` validation forbids dots/extensions — "path" means slash-separated names like `admin/users-crud`). Routed to the CLI repo backlog. Source: `qa-prowl-docs-weekly-20260815` {PDOC-QA-006}, 2026-08-23.
