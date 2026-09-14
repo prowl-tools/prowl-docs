@@ -60,22 +60,26 @@ cd your-project
 prowl init
 ```
 
-This creates a `.prowl/` directory with a config file, a starter hunt, and a `.gitignore`:
+This creates a `.prowl/` directory with a config file, the starter hunts, and a `.gitignore`:
 
 ```text
 .prowl/
-├── config.yml        # Target URL, browser settings, guardrails
+├── config.yml          # Target URL, browser settings, guardrails
 ├── hunts/
-│   └── hello.yml     # Minimal "does the page load?" smoke test
-└── .gitignore        # Keeps runs/, auth-state.json, and .env out of git
+│   ├── hello.yml       # Minimal "does the page load?" smoke test
+│   └── login-flow.yml  # Commented, real-world auth example
+└── .gitignore          # Keeps runs/, auth-state.json, and .env out of git
 ```
 
-`prowl init` finishes by pointing you at the bundled hunt:
+`prowl init` finishes by pointing you at the bundled hunts:
 
 ```text
   Initialized .prowl directory.
   Run prowl run hello to get started.
+  See .prowl/hunts/login-flow.yml for a fuller example.
 ```
+
+See [Starter Templates](./starter-templates.md) for a walkthrough of each bundled hunt.
 
 ## Configure
 

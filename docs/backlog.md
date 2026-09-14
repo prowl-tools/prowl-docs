@@ -16,7 +16,22 @@ title: Product Backlog
 
 ## High Priority
 
-*No active items.*
+### {PQD-010} **Document the four-starter `prowl init` set (gated on the next CLI release)**
+   The CLI's `lean-starter` branch (prowl {PROWL-072}, merged to its `main` 2026-09-13,
+unreleased) grows the `prowl init` scaffold from two starters to four: `hello.yml` (web smoke),
+`login-flow.yml` (web auth), **`form.yml`** (web forms — `fill`/`select`/`assert` with shorthand
+and explicit-selector forms), and **`macos-hello.yml`** (the desktop-first first-run hunt
+targeting TextEdit through the Accessibility API, marked experimental, with inline enablement
+comments). When the release containing it ships (v0.1.9 or later), update this site to match:
+the init tree and post-init banner in `getting-started.md`, and `starter-templates.md` with a
+walkthrough section per new starter (mirror the honest macOS setup framing — helper install,
+Accessibility permission, config target swap; keep the experimental label per {PQD-009}).
+
+**Found during**: prowl PROWL-072 cross-repo duty check (2026-09-13)
+**Gate**: do NOT publish before the CLI release ships — the site documents the released CLI
+(`npm i -g prowl-tools`), and 0.1.8 scaffolds only two starters.
+**Deliverable**: getting-started + starter-templates updated to the four-starter reality, cross-
+linked from the macOS target page.
 
 ## Medium Priority
 
