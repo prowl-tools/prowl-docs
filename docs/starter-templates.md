@@ -57,7 +57,7 @@ prowl run login-flow
 
 See [Variables](/variables) for interpolation precedence and secret handling, and [Authentication](/auth) for capturing login state.
 
-### `form.yml` — the forms pattern
+### `form.yml` — the forms pattern {#formyml}
 
 A commented walkthrough of the other flow almost every app has: fill a form, pick an option, submit, and confirm the success state. It leans on Prowl's **shorthand selectors**, which find an element by its visible label, placeholder, or text — no CSS to write:
 
@@ -85,7 +85,7 @@ Prefer stable selectors — an accessible label or a `data-testid` — over brit
 prowl run form
 ```
 
-### `macos-hello.yml` — a desktop-first first-run hunt
+### `macos-hello.yml` — a desktop-first first-run hunt {#macos-helloyml}
 
 Prowl is **desktop-first**: it drives native macOS apps through Apple's Accessibility API from the same YAML as web hunts. This starter targets **TextEdit** — present on every Mac — so you can try the desktop target without wiring up your own app first. It types a line into a fresh document and asserts the text appears, using only portable steps (`type`, `assert: visible`) that run on both the web and macOS targets.
 
