@@ -95,10 +95,11 @@ The macOS target is **experimental** (see the [macOS Target](/macos-target) page
 
 Because this hunt drives a native app, it needs a one-time setup before it will run — the starter's own inline comments walk through each step, and they mirror the [macOS Target](/macos-target) page:
 
-1. **Install the helper:** `prowl macdriver install`. Until the first signed `prowl-macdriver` release ships, `install` returns a clear "no release yet" error (a 404 against GitHub Releases) — build from source instead, which needs the Swift toolchain / Xcode CLT:
+1. **Install the helper:** `prowl macdriver install`. Until the first signed `prowl-macdriver` release ships, `install` returns a clear "no release yet" error (a 404 against GitHub Releases) — build from source instead, which needs a checkout of the [prowl repo](https://github.com/prowl-tools/prowl) and the Swift toolchain / Xcode CLT:
 
    ```bash
-   cd macdriver && swift build -c release
+   git clone https://github.com/prowl-tools/prowl.git
+   cd prowl/macdriver && swift build -c release
    ```
 
    `prowl macdriver status` prints the resolved binary and the same guidance.
