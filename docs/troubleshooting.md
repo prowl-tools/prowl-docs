@@ -93,7 +93,7 @@ prowl login --config <path>             # Use custom config path
 
 # Initialize — create .prowl directory with examples
 prowl init
-prowl init --force                      # Re-create config and the starter hunts (hello.yml, login-flow.yml)
+prowl init --force                      # Re-create config and the four starter hunts (hello, login-flow, form, macos-hello)
 
 # List available hunts
 prowl list

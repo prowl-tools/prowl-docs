@@ -12,6 +12,10 @@ Prowl can drive **native macOS apps** — including menu bar extras (`NSStatusIt
 This target is **experimental**. The macOS code path ships in every `prowl-tools` install, but its Swift helper binary, `prowl-macdriver`, is **not yet distributed as a signed release**. The `prowl macdriver install` command exists (added in **0.1.7**), but until the first signed helper release is cut it returns a clear "no release yet — build from source" error. **Building the helper from source is the working path today** (see [Requirements](#requirements)); you can also point `PROWL_MACDRIVER_BIN` at a binary you built. The API, selector dialect, and step coverage may still change, and the target stays experimental until the two-minute signed install lands.
 :::
 
+:::tip Try it without your own app
+`prowl init` scaffolds a `macos-hello.yml` starter that drives **TextEdit** — on every Mac — so you can exercise the macOS target before wiring up your own app. See [Starter Templates](/starter-templates#macos-helloyml).
+:::
+
 ## Requirements
 
 - **macOS 13 or newer** (the helper's platform target).
