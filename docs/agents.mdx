@@ -144,7 +144,7 @@ Returns a single hunt result:
 }
 ```
 
-On a **retried** run (a hunt with a [`retry`](/) block where more than one attempt ran), the result also carries `retryHistory` and `retrySummary` (0.1.10). Both are **absent** on a first-attempt pass and on any artifact written before 0.1.10, so existing parsers are unaffected:
+On a **retried** run (a hunt with a [`retry`](/troubleshooting#retry-diagnostics) block where more than one attempt ran), the result also carries `retryHistory` and `retrySummary` (0.1.10). Both are **absent** on a first-attempt pass and on any artifact written before 0.1.10, so existing parsers are unaffected:
 
 ```json
 {

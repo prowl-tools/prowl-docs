@@ -122,7 +122,7 @@ When `--junit` is passed, each hunt run directory still gets its own `junit.xml`
 
 ### Retry diagnostics
 
-As of **0.1.10**, a hunt with a [`retry`](/) block no longer retries silently — Prowl records what each attempt did so you can tell a flaky test apart from a slow environment or a real regression. The diagnostics appear **only when more than one attempt ran**; a first-attempt pass (and any run artifact written before 0.1.10) is unchanged and keeps parsing.
+As of **0.1.10**, a hunt with a [`retry`](/troubleshooting#retry-diagnostics) block no longer retries silently — Prowl records what each attempt did so you can tell a flaky test apart from a slow environment or a real regression. The diagnostics appear **only when more than one attempt ran**; a first-attempt pass (and any run artifact written before 0.1.10) is unchanged and keeps parsing.
 
 `result.json` gains two fields:
 
