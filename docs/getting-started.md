@@ -130,7 +130,7 @@ retry:
 - The **file name is the hunt's identity**: `prowl run smoke-test` loads `.prowl/hunts/smoke-test.yml`. The `name:` field is metadata — the file name, not `name:`, must match the command you run.
 - **`description`** — a human-readable summary stored in hunt metadata and shown by `prowl list`
 - **`tags`** — categorize hunts for filtering with `--include-tags` and `--exclude-tags`
-- **`retry`** — configure automatic retries on failure (`maxRetries: 0` means no retries)
+- **`retry`** — configure automatic retries on failure (`maxRetries: 0` means no retries). As of **0.1.10**, retries are no longer silent: when more than one attempt runs, Prowl records what each attempt did (a `retryHistory` array plus a one-line `retrySummary`) in the run artifacts and prints the headline in the `prowl run` summary. See [Retry diagnostics](/troubleshooting#retry-diagnostics).
 :::
 
 ## Run
@@ -160,7 +160,7 @@ You now have a stable smoke test and a run artifact folder you can inspect in CI
   </a>
   <a className="card" href="/step-types">
     <h3>Step Types</h3>
-    <p>All 29 step types available in hunts</p>
+    <p>All 30 step types available in hunts</p>
   </a>
   <a className="card" href="/configuration">
     <h3>Configuration</h3>

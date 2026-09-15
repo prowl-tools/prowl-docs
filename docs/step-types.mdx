@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Step Types
 
-Prowl supports 29 step types. Most have both a **shorthand** form (concise, readable) and an **explicit** form (full control over selectors).
+Prowl supports 30 step types. Most have both a **shorthand** form (concise, readable) and an **explicit** form (full control over selectors).
 
 :::note
 These steps target the **web**. A **portable subset** also runs on the experimental native targets ([macOS](/macos-target), [Android](/android), [iOS](/ios)) — see [Step compatibility by target](#step-compatibility-by-target) below. Web-only steps (`navigate`, network mocking, dialogs, etc.) are rejected up front on native targets.
@@ -31,7 +31,7 @@ The **web** target runs every step. On a **native** target, web-only steps in th
 | `hover` | ✅ | ✅ | ❌ (no touch equivalent yet) |
 | `assertWithAI` | ✅ | ✅ | ✅ |
 | Hunt-level `assertions:` (`selectorExists` / `selectorNotExists`) | ✅ | ✅ | ✅ |
-| `navigate`, `waitForUrl`, `waitForNetworkIdle` | ✅ | ❌ | ❌ |
+| `navigate`, `waitForUrl`, `waitForNetworkIdle`, `waitForResponse` | ✅ | ❌ | ❌ |
 | `mockRoute` / `unmockRoute` | ✅ | ❌ | ❌ |
 | `evalScript`, `runScript` | ✅ | ❌ | ❌ |
 | `onDialog` | ✅ | ❌ | ❌ |
@@ -273,6 +273,35 @@ Wait for all network requests to complete.
 - waitForNetworkIdle:
     timeout: 5000
 ```
+
+## waitForResponse
+
+Wait for a **specific** network response before continuing (0.1.10). Web-only. More precise than [`waitForNetworkIdle`](#waitfornetworkidle), which waits for *all* traffic to settle — `waitForResponse` resolves as soon as the one response you care about arrives.
+
+```yaml
+- waitForResponse:
+    url: "**/api/orders"
+    status: 200
+    timeout: 10000
+```
+
+- `url` (required) is matched against each response URL as an **unanchored glob**: `*`/`**` match any run of characters (including `/`, `?`, and `&`), and `?` matches a single character. Because it is unanchored, a wildcard-free pattern behaves as a **substring match** — `/api/orders` matches `https://shop.test/api/orders?page=2`.
+- `status` (optional) resolves the step only on a response with that **exact** HTTP status.
+- `timeout` (optional, milliseconds) fails the step with a clear message naming the pattern (and the `status`/`timeout` you set) if no matching response arrives in time.
+
+The `url` supports both [hunt-var interpolation](/variables) (`{{VAR}}` from `vars`/env) and runtime-var substitution from a value captured earlier with `copyText` or `evalScript`:
+
+```yaml
+- copyText:
+    selector: "[data-testid='order-id']"
+    as: "ORDER_ID"
+- click: "Refresh status"
+- waitForResponse:
+    url: "**/api/orders/{{ORDER_ID}}"
+    status: 200
+```
+
+Like the other network steps, `waitForResponse` is **web-only** — it is rejected up front on the experimental [macOS](/macos-target), [Android](/android), and [iOS](/ios) targets.
 
 ## waitForDownload
 

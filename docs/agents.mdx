@@ -144,6 +144,20 @@ Returns a single hunt result:
 }
 ```
 
+On a **retried** run (a hunt with a [`retry`](/troubleshooting#retry-diagnostics) block where more than one attempt ran), the result also carries `retryHistory` and `retrySummary` (0.1.10). Both are **absent** on a first-attempt pass and on any artifact written before 0.1.10, so existing parsers are unaffected:
+
+```json
+{
+  "retryHistory": [
+    { "attempt": 1, "status": "fail", "durationMs": 5010, "failedStep": { "index": 0, "type": "navigate" }, "error": "Timeout 5000ms exceeded" },
+    { "attempt": 2, "status": "pass", "durationMs": 240 }
+  ],
+  "retrySummary": "Passed on attempt 2 of 3 — first failure: navigate (Timeout 5000ms exceeded)"
+}
+```
+
+Each `retryHistory` record has a 1-based `attempt` (attempt 1 is the initial run), a `status`, its `durationMs`, and — on a failed attempt only — the first `failedStep` (`{ index, type }`, `index` 0-based) and the `error`. The last entry always matches the final result. See [Retry diagnostics](/troubleshooting#retry-diagnostics).
+
 ### `prowl ci --json`
 
 Returns a combined result for all hunts:
@@ -186,12 +200,12 @@ prowl history smoke-test --json --limit 50
 
 ```json
 [
-  { "hunt": "smoke-test", "status": "pass", "durationMs": 220, "startedAt": "2026-05-28T17:15:12.481Z", "runDir": ".prowl/runs/2026-05-28_17-15-12-481" },
+  { "hunt": "smoke-test", "status": "pass", "durationMs": 1240, "startedAt": "2026-05-28T17:15:12.481Z", "runDir": ".prowl/runs/2026-05-28_17-15-12-481", "retries": 1 },
   { "hunt": "smoke-test", "status": "fail", "durationMs": 1840, "startedAt": "2026-05-28T09:02:55.001Z", "runDir": ".prowl/runs/2026-05-28_09-02-55-001" }
 ]
 ```
 
-Retention is configurable via `history.maxRuns` — see [Configuration](/configuration#history).
+Each entry carries an optional `retries` count (0.1.10) — retry attempts beyond the first — omitted when zero; older entries without it still parse. Retention is configurable via `history.maxRuns` — see [Configuration](/configuration#history).
 
 ## Connect Over MCP
 
@@ -305,7 +319,7 @@ const smoke = readHuntHistory(configDir, "smoke-test"); // HistoryEntry[]
 const failRate = smoke.filter((e) => e.status === "fail").length / smoke.length;
 ```
 
-`HistoryEntry` is `{ hunt: string; status: "pass" | "fail"; durationMs: number; startedAt: string; runDir?: string }`. Retention is capped per hunt by `history.maxRuns` — see [Configuration](/configuration#history).
+`HistoryEntry` is `{ hunt: string; status: "pass" | "fail"; durationMs: number; startedAt: string; runDir?: string; retries?: number }` (`retries` added in 0.1.10 — retry attempts beyond the first, omitted when zero). Retention is capped per hunt by `history.maxRuns` — see [Configuration](/configuration#history).
 
 ## Using Starter Templates
 
@@ -395,7 +409,7 @@ The starter hunts ship inside the CLI. Contribute your own by opening a pull req
   </a>
   <a className="card" href="/step-types">
     <h3>Step Types</h3>
-    <p>All 29 step types available in hunts</p>
+    <p>All 30 step types available in hunts</p>
   </a>
   <a className="card" href="/troubleshooting">
     <h3>Troubleshooting</h3>

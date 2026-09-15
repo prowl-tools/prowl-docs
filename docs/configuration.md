@@ -147,7 +147,7 @@ The native targets are **experimental** (shipped in Prowl 0.1.5). Each has its o
 
 ### history
 
-Every `prowl run` and `prowl ci` appends an entry to `.prowl/history.json` (hunt name, status, start time, duration, and run directory). Retention is capped **per hunt** — once a hunt exceeds the cap, its oldest entries are dropped on the next write; other hunts are unaffected.
+Every `prowl run` and `prowl ci` appends an entry to `.prowl/history.json` (hunt name, status, start time, duration, and run directory). As of **0.1.10**, an entry also carries an optional `retries` count — the number of retry attempts beyond the first for that run (omitted when zero; older `history.json` files without it still load). Retention is capped **per hunt** — once a hunt exceeds the cap, its oldest entries are dropped on the next write; other hunts are unaffected.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -159,6 +159,8 @@ Inspect history with `prowl history <hunt-name>` (add `--json` for machine-reada
 prowl history smoke-test
 prowl history smoke-test --limit 50 --json
 ```
+
+The table view includes a `Retries` column and a `Retried in N of M runs` frequency line (0.1.10) so a flaky hunt stands out from a slow environment over time — see [Retry diagnostics](/troubleshooting#retry-diagnostics).
 
 ## CLI Overrides
 
