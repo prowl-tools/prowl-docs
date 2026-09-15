@@ -106,8 +106,8 @@ Every hunt run generates artifacts in `.prowl/runs/<timestamp>/`:
 
 ```
 .prowl/runs/2026-02-09_10-30-45/
-├── summary.md           # Human-readable report
-├── result.json          # Machine-readable results
+├── summary.md           # Human-readable report (gains a ## Retries section on a retried run)
+├── result.json          # Machine-readable results (gains retryHistory/retrySummary on a retried run)
 ├── console.log          # Browser console output
 ├── screenshots/
 │   ├── final.png        # Final page state
@@ -119,6 +119,25 @@ Every hunt run generates artifacts in `.prowl/runs/<timestamp>/`:
 
 `prowl ci` writes a combined summary file to `.prowl/runs/ci-<timestamp>/ci-result.json`.  
 When `--junit` is passed, each hunt run directory still gets its own `junit.xml` (there is no merged JUnit file yet).
+
+### Retry diagnostics
+
+As of **0.1.10**, a hunt with a [`retry`](/getting-started) block no longer retries silently — Prowl records what each attempt did so you can tell a flaky test apart from a slow environment or a real regression. The diagnostics appear **only when more than one attempt ran**; a first-attempt pass (and any run artifact written before 0.1.10) is unchanged and keeps parsing.
+
+`result.json` gains two fields:
+
+- **`retryHistory`** — one record per attempt: `attempt` (1-based; attempt 1 is the initial run), `status`, `durationMs`, the first `failedStep` (`{ index, type }`, where `index` is 0-based), and the `error`. `failedStep` and `error` are absent on an attempt that passed. The last entry always matches the final result.
+- **`retrySummary`** — a one-line headline, e.g. `Passed on attempt 2 of 3 — first failure: navigate (timeout)`, or `Failed after 3 attempts — first failure: …` when the retries were exhausted.
+
+`summary.md` gains a matching `## Retries` section (the headline plus a per-attempt breakdown), and the `prowl run` summary prints the headline:
+
+```text
+  PASS smoke-test (1240ms) 3/3 steps
+  Passed on attempt 2 of 3 — first failure: navigate (timeout)
+  Artifacts: .prowl/runs/2026-02-09_10-30-45
+```
+
+`prowl history` surfaces retries over time — a `Retries` column per run and a `Retried in N of M runs` frequency line — so a flaky hunt is easy to spot. JUnit is deliberately **unchanged**: it reports the final attempt's outcome, so a retried-and-passed hunt is a green testcase for CI, while the per-attempt history lives in `result.json`, not the XML.
 
 ### Viewing Traces
 
